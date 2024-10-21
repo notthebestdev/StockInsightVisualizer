@@ -13,6 +13,7 @@ from tensorflow.keras.layers import LSTM, Dense
 from datetime import datetime, timedelta
 import base64
 from io import StringIO
+import xgboost as xgb
 
 st.set_page_config(
     page_title="Stock Data Visualization",
@@ -24,7 +25,7 @@ st.sidebar.title("Stock Data Visualization")
 stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
 date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
 prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
-model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "ARIMA", "LSTM"])
+model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "ARIMA", "LSTM", "XGBoost"])
 
 st.title(f"Stock Data for {stock_symbol}")
 
@@ -97,6 +98,21 @@ def lstm_prediction(df, prediction_days):
         st.error(f"An error occurred in LSTM prediction: {str(e)}")
         return None, None
 
+def xgboost_prediction(df, prediction_days):
+    X = np.arange(len(df)).reshape(-1, 1)
+    y = df['Close'].values
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    
+    model = xgb.XGBRegressor(objective="reg:squarederror", n_estimators=100, learning_rate=0.1)
+    model.fit(X_train, y_train)
+
+    future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
+    future_X = np.arange(len(df), len(df) + prediction_days).reshape(-1, 1)
+    future_prices = model.predict(future_X)
+
+    return future_dates, future_prices
+
 try:
     df, info = get_stock_data(stock_symbol, date_range)
     
@@ -123,8 +139,10 @@ try:
         future_dates, future_prices = linear_regression_prediction(df, prediction_days)
     elif model_choice == "ARIMA":
         future_dates, future_prices = arima_prediction(df, prediction_days)
-    else:  # LSTM
+    elif model_choice == "LSTM":
         future_dates, future_prices = lstm_prediction(df, prediction_days)
+    else:  # XGBoost
+        future_dates, future_prices = xgboost_prediction(df, prediction_days)
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, subplot_titles=('Stock Price', 'Volume'), row_width=[0.2, 0.7])
 
@@ -157,7 +175,7 @@ This Stock Data Visualization app allows you to:
 - View key financial information for a given stock
 - Visualize historical price data with an interactive chart
 - Download the summary data as a CSV file
-- See price predictions using different models (Linear Regression, ARIMA, and LSTM)
+- See price predictions using different models (Linear Regression, ARIMA, LSTM, and XGBoost)
 
 Enter a stock symbol in the sidebar to get started!
 """)
