@@ -67,6 +67,9 @@ A comprehensive stock data visualization app using Streamlit with advanced predi
 - statsmodels
 - TensorFlow (Keras)
 
+## Note on GPU Acceleration
+Currently, this app runs on CPU only. GPU acceleration is not available in the current environment. This may affect the performance of machine learning models, especially for large datasets or complex predictions.
+
 ## Contributing 🤝
 
 We welcome contributions to improve the Stock Data Visualization project. Please follow these steps to contribute:

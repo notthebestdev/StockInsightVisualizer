@@ -1,0 +1,23 @@
+2024-10-21 23:07:04.817183: I external/local_xla/xla/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
+2024-10-21 23:07:04.820502: I external/local_xla/xla/tsl/cuda/cudart_stub.cc:32] Could not find cuda drivers on your machine, GPU will not be used.
+2024-10-21 23:07:04.830758: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-10-21 23:07:04.846461: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-10-21 23:07:04.851026: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-10-21 23:07:04.863256: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-10-21 23:07:06.022276: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/home/runner/StockInsightVisualizer/main.py:54: UserWarning:
+
+Converting to PeriodArray/Index representation will drop timezone information.
+
+/home/runner/StockInsightVisualizer/main.py:54: FutureWarning:
+
+PeriodDtype[B] is deprecated and will be removed in a future version. Use a DatetimeIndex with freq='B' instead
+
+/home/runner/StockInsightVisualizer/main.py:54: UserWarning:
+
+Converting to PeriodArray/Index representation will drop timezone information.
+
+/home/runner/StockInsightVisualizer/main.py:54: FutureWarning:
+
+PeriodDtype[B] is deprecated and will be removed in a future version. Use a DatetimeIndex with freq='B' instead
