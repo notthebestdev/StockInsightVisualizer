@@ -109,3 +109,5 @@ This Stock Data Visualization app allows you to:
 
 Enter a stock symbol in the sidebar to get started!
 """)
+
+st.markdown('<p style="text-align:center;font-size:0.8em;">Made with ❤️ by TheBestDeveloper</p>', unsafe_allow_html=True)
