@@ -14,21 +14,18 @@ from datetime import datetime, timedelta
 import base64
 from io import StringIO
 
-# Set page config
 st.set_page_config(
     page_title="Stock Data Visualization",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Sidebar
 st.sidebar.title("Stock Data Visualization")
 stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
 date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
 prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
 model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "ARIMA", "LSTM"])
 
-# Main content
 st.title(f"Stock Data for {stock_symbol}")
 
 @st.cache_data
@@ -59,42 +56,62 @@ def arima_prediction(df, prediction_days):
     return future_dates, forecast
 
 def lstm_prediction(df, prediction_days):
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(df['Close'].values.reshape(-1, 1))
+    try:
+        st.write("Debug: Starting LSTM prediction")
+        st.write(f"Debug: Input DataFrame shape: {df.shape}")
+        
+        if len(df) < 60:
+            st.error("Error: Not enough data points for LSTM prediction. Need at least 60 data points.")
+            return None, None
 
-    x_train, y_train = [], []
-    for i in range(60, len(scaled_data)):
-        x_train.append(scaled_data[i-60:i, 0])
-        y_train.append(scaled_data[i, 0])
-    x_train, y_train = np.array(x_train), np.array(y_train)
-    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        scaled_data = scaler.fit_transform(df['Close'].values.reshape(-1, 1))
+        
+        st.write(f"Debug: Scaled data shape: {scaled_data.shape}")
 
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
-    model.add(LSTM(units=50))
-    model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(x_train, y_train, epochs=1, batch_size=1, verbose=0)
+        x_train, y_train = [], []
+        for i in range(60, len(scaled_data)):
+            x_train.append(scaled_data[i-60:i, 0])
+            y_train.append(scaled_data[i, 0])
+        x_train, y_train = np.array(x_train), np.array(y_train)
+        x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+        
+        st.write(f"Debug: x_train shape: {x_train.shape}, y_train shape: {y_train.shape}")
 
-    inputs = df['Close'].values[-60:].reshape(-1, 1)
-    inputs = scaler.transform(inputs)
-    
-    future_prices = []
-    current_batch = inputs[-60:].reshape((1, 60, 1))
-    for i in range(prediction_days):
-        current_pred = model.predict(current_batch)[0]
-        future_prices.append(current_pred[0])
-        current_batch = np.roll(current_batch, -1, axis=1)
-        current_batch[0, -1, 0] = current_pred[0]
-    
-    future_prices = scaler.inverse_transform(np.array(future_prices).reshape(-1, 1))
-    future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
-    return future_dates, future_prices.flatten()
+        model = Sequential()
+        model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
+        model.add(LSTM(units=50))
+        model.add(Dense(1))
+        model.compile(optimizer='adam', loss='mean_squared_error')
+        model.fit(x_train, y_train, epochs=1, batch_size=1, verbose=0)
+
+        inputs = df['Close'].values[-60:].reshape(-1, 1)
+        inputs = scaler.transform(inputs)
+        
+        st.write(f"Debug: Inputs shape: {inputs.shape}")
+        
+        future_prices = []
+        current_batch = inputs[-60:].reshape((1, 60, 1))
+        for i in range(prediction_days):
+            current_pred = model.predict(current_batch)[0]
+            future_prices.append(current_pred[0])
+            current_batch = np.roll(current_batch, -1, axis=1)
+            current_batch[0, -1, 0] = current_pred[0]
+        
+        future_prices = scaler.inverse_transform(np.array(future_prices).reshape(-1, 1))
+        future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
+        
+        st.write(f"Debug: Future prices shape: {future_prices.shape}")
+        st.write(f"Debug: Future dates shape: {future_dates.shape}")
+        
+        return future_dates, future_prices.flatten()
+    except Exception as e:
+        st.error(f"An error occurred in LSTM prediction: {str(e)}")
+        return None, None
 
 try:
     df, info = get_stock_data(stock_symbol, date_range)
     
-    # Summary table
     st.subheader("Summary")
     summary_data = {
         "Open": df['Open'].iloc[-1],
@@ -109,13 +126,11 @@ try:
     summary_df = pd.DataFrame([summary_data])
     st.table(summary_df)
 
-    # Download CSV
     csv = summary_df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()
     href = f'<a href="data:file/csv;base64,{b64}" download="{stock_symbol}_summary.csv">Download CSV</a>'
     st.markdown(href, unsafe_allow_html=True)
 
-    # Price prediction
     if model_choice == "Linear Regression":
         future_dates, future_prices = linear_regression_prediction(df, prediction_days)
     elif model_choice == "ARIMA":
@@ -123,16 +138,12 @@ try:
     else:  # LSTM
         future_dates, future_prices = lstm_prediction(df, prediction_days)
 
-    # Plotting
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, subplot_titles=('Stock Price', 'Volume'), row_width=[0.2, 0.7])
 
-    # Candlestick chart
     fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name="Stock Price"), row=1, col=1)
 
-    # Prediction line
     fig.add_trace(go.Scatter(x=future_dates, y=future_prices, mode='lines', name=f'{model_choice} Prediction', line=dict(color='red', dash='dash')), row=1, col=1)
 
-    # Volume chart
     fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name="Volume"), row=2, col=1)
 
     fig.update_layout(
@@ -151,7 +162,6 @@ except Exception as e:
     st.error(f"An error occurred: {str(e)}")
     st.info("Please check if the stock symbol is correct and try again.")
 
-# App description
 st.markdown("""
 ## About this app
 This Stock Data Visualization app allows you to:
