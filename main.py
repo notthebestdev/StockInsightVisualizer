@@ -5,7 +5,6 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
@@ -24,7 +23,7 @@ st.sidebar.title("Stock Data Visualization")
 stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
 date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
 prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
-model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "Random Forest", "LSTM"])
+model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "LSTM"])
 
 st.title(f"Stock Data for {stock_symbol}")
 
@@ -40,20 +39,6 @@ def linear_regression_prediction(df, prediction_days):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
     model = LinearRegression()
-    model.fit(X_train, y_train)
-
-    future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
-    future_X = np.arange(len(df), len(df) + prediction_days).reshape(-1, 1)
-    future_prices = model.predict(future_X)
-
-    return future_dates, future_prices
-
-def random_forest_prediction(df, prediction_days):
-    X = df.index.astype(int).values.reshape(-1, 1)
-    y = df['Close'].values
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-    model = RandomForestRegressor(n_estimators=100, random_state=0)
     model.fit(X_train, y_train)
 
     future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
@@ -133,8 +118,6 @@ try:
 
     if model_choice == "Linear Regression":
         future_dates, future_prices = linear_regression_prediction(df, prediction_days)
-    elif model_choice == "Random Forest":
-        future_dates, future_prices = random_forest_prediction(df, prediction_days)
     else:  # LSTM
         future_dates, future_prices = lstm_prediction(df, prediction_days)
 
@@ -169,7 +152,7 @@ This Stock Data Visualization app allows you to:
 - View key financial information for a given stock
 - Visualize historical price data with an interactive chart
 - Download the summary data as a CSV file
-- See price predictions using different models (Linear Regression, Random Forest, and LSTM)
+- See price predictions using different models (Linear Regression and LSTM)
 
 Enter a stock symbol in the sidebar to get started!
 """)
