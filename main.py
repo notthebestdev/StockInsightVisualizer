@@ -7,7 +7,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from datetime import datetime, timedelta
 import numpy as np
-from streamlit_extras.switch_page_button import switch_page
 import base64
 from io import StringIO
 
@@ -19,43 +18,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Initialize session state
-if 'theme' not in st.session_state:
-    st.session_state.theme = 'light'
-
-# Theme switcher
-def switch_theme():
-    st.session_state.theme = 'dark' if st.session_state.theme == 'light' else 'light'
-    switch_page("main")
-
-# Apply theme
-if st.session_state.theme == 'dark':
-    st.markdown("""
-    <style>
-    .stApp {
-        background-color: #0E1117;
-        color: #FAFAFA;
-    }
-    .stTextInput > div > div > input {
-        background-color: #262730;
-        color: #FAFAFA;
-    }
-    .stSelectbox > div > div > select {
-        background-color: #262730;
-        color: #FAFAFA;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # Sidebar
 st.sidebar.title("Stock Data Visualization")
 st.sidebar.image("assets/app_icon.svg", width=100)
 stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
 date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
 prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
-
-if st.sidebar.button("Switch Theme"):
-    switch_theme()
 
 # Main content
 st.title(f"Stock Data for {stock_symbol}")
@@ -137,7 +105,6 @@ This Stock Data Visualization app allows you to:
 - View key financial information for a given stock
 - Visualize historical price data with an interactive chart
 - Download the summary data as a CSV file
-- Switch between light and dark themes
 - See a price prediction for the near future
 
 Enter a stock symbol in the sidebar to get started!
