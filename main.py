@@ -51,18 +51,18 @@ def linear_regression_prediction(df, prediction_days):
 
 def arima_prediction(df, prediction_days):
     try:
+        print(f"Debug: Data shape: {df.shape}")
+        print(f"Debug: Prediction days: {prediction_days}")
+
         if len(df) < 30:
             st.warning("Not enough data points for ARIMA prediction. Falling back to simple moving average.")
-            # Calculate simple moving average
             ma = df['Close'].rolling(window=min(len(df), 7)).mean()
             future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
             future_prices = [ma.iloc[-1]] * len(future_dates)
             return future_dates, future_prices
 
-        # Limit prediction to a maximum of 1 year (252 trading days)
         prediction_days = min(prediction_days, 252)
         
-        # Adjust ARIMA parameters based on the length of the input data
         if len(df) < 100:
             order = (1, 1, 1)
         elif len(df) < 500:
@@ -73,14 +73,11 @@ def arima_prediction(df, prediction_days):
         model = ARIMA(df['Close'], order=order, freq='B')
         results = model.fit()
         
-        # Generate forecast
         forecast = results.forecast(steps=prediction_days)
         future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
         
-        print(f"Debug: Forecast shape: {forecast.shape}")
-        print(f"Debug: Future dates shape: {future_dates.shape}")
-        print(f"Debug: Forecast head: {forecast.head()}")
-        print(f"Debug: Future dates head: {future_dates[:5]}")
+        print(f"Debug: Forecast length: {len(forecast)}")
+        print(f"Debug: Future dates length: {len(future_dates)}")
         
         if len(forecast) == 0 or len(future_dates) == 0:
             raise ValueError('Forecast or future dates are empty')
@@ -88,12 +85,12 @@ def arima_prediction(df, prediction_days):
         if isinstance(forecast, pd.Series):
             forecast = forecast.values
         
+        min_length = min(len(forecast), len(future_dates))
+        forecast = forecast[:min_length]
+        future_dates = future_dates[:min_length]
+        
         if len(forecast) != len(future_dates):
-            # Truncate the longer one to match the shorter one
-            min_length = min(len(forecast), len(future_dates))
-            forecast = forecast[:min_length]
-            future_dates = future_dates[:min_length]
-            print(f"Debug: After truncation - Forecast length: {len(forecast)}, Future dates length: {len(future_dates)}")
+            raise ValueError(f"Lengths still do not match: Forecast ({len(forecast)}) vs Future dates ({len(future_dates)})")
         
         return future_dates, forecast
     except Exception as e:
