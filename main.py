@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.arima.model import ARIMA
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import LSTM, Dense, Input
 from datetime import datetime, timedelta
 import base64
 from io import StringIO
@@ -72,10 +72,13 @@ def lstm_prediction(df, prediction_days):
         x_train, y_train = np.array(x_train), np.array(y_train)
         x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-        model = Sequential()
-        model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
-        model.add(LSTM(units=50))
-        model.add(Dense(1))
+        input_layer = Input(shape=(x_train.shape[1], 1))
+        model = Sequential([
+            input_layer,
+            LSTM(units=50, return_sequences=True),
+            LSTM(units=50),
+            Dense(1)
+        ])
         model.compile(optimizer='adam', loss='mean_squared_error')
         model.fit(x_train, y_train, epochs=1, batch_size=1, verbose=0)
 
@@ -85,7 +88,7 @@ def lstm_prediction(df, prediction_days):
         future_prices = []
         current_batch = inputs[-60:].reshape((1, 60, 1))
         for i in range(prediction_days):
-            current_pred = model.predict(current_batch)[0]
+            current_pred = model.predict(current_batch, verbose=0)[0]
             future_prices.append(current_pred[0])
             current_batch = np.roll(current_batch, -1, axis=1)
             current_batch[0, -1, 0] = current_pred[0]
@@ -100,25 +103,20 @@ def lstm_prediction(df, prediction_days):
 
 def xgboost_prediction(df, prediction_days):
     try:
-        # Prepare the data
         df['Date'] = df.index
         df['Date'] = (df['Date'] - df['Date'].min()).dt.days
         X = df[['Date']].values
         y = df['Close'].values
 
-        # Split the data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
 
-        # Create and train the model
         model = xgb.XGBRegressor(objective="reg:squarederror", n_estimators=100, learning_rate=0.1, random_state=0)
         model.fit(X_train, y_train)
 
-        # Prepare future dates for prediction
         last_date = df['Date'].iloc[-1]
         future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
         future_X = np.arange(last_date + 1, last_date + prediction_days + 1).reshape(-1, 1)
 
-        # Make predictions
         future_prices = model.predict(future_X)
 
         return future_dates, future_prices
