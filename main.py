@@ -49,7 +49,7 @@ def linear_regression_prediction(df, prediction_days):
 
 def lstm_prediction(df, prediction_days):
     if len(df) < 60:
-        st.warning("Not enough data points for LSTM prediction. Need at least 60 data points.")
+        st.warning("Not enough data points for LSTM prediction. Make sure the Date Range is higher than 1 months.")
         return None, None
 
     try:
