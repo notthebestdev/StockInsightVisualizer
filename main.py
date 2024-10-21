@@ -5,15 +5,14 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from statsmodels.tsa.arima.model import ARIMA
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Input
+from tensorflow.keras.layers import LSTM, Dense, Input, Dropout
 from datetime import datetime, timedelta
 import base64
 from io import StringIO
-import xgboost as xgb
 
 st.set_page_config(
     page_title="Stock Data Visualization",
@@ -25,7 +24,7 @@ st.sidebar.title("Stock Data Visualization")
 stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
 date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
 prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
-model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "ARIMA", "LSTM", "XGBoost"])
+model_choice = st.sidebar.selectbox("Select Prediction Model", ["Linear Regression", "Random Forest", "LSTM"])
 
 st.title(f"Stock Data for {stock_symbol}")
 
@@ -49,55 +48,19 @@ def linear_regression_prediction(df, prediction_days):
 
     return future_dates, future_prices
 
-def arima_prediction(df, prediction_days):
-    try:
-        print(f"Debug: Data shape: {df.shape}")
-        print(f"Debug: Prediction days: {prediction_days}")
+def random_forest_prediction(df, prediction_days):
+    X = df.index.astype(int).values.reshape(-1, 1)
+    y = df['Close'].values
 
-        if len(df) < 30:
-            st.warning("Not enough data points for ARIMA prediction. Falling back to simple moving average.")
-            ma = df['Close'].rolling(window=min(len(df), 7)).mean()
-            future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
-            future_prices = [ma.iloc[-1]] * len(future_dates)
-            return future_dates, future_prices
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    model = RandomForestRegressor(n_estimators=100, random_state=0)
+    model.fit(X_train, y_train)
 
-        prediction_days = min(prediction_days, 252)
-        
-        if len(df) < 100:
-            order = (1, 1, 1)
-        elif len(df) < 500:
-            order = (2, 1, 2)
-        else:
-            order = (3, 1, 3)
-        
-        model = ARIMA(df['Close'], order=order, freq='B')
-        results = model.fit()
-        
-        forecast = results.forecast(steps=prediction_days)
-        future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
-        
-        print(f"Debug: Forecast length: {len(forecast)}")
-        print(f"Debug: Future dates length: {len(future_dates)}")
-        
-        if len(forecast) == 0 or len(future_dates) == 0:
-            raise ValueError('Forecast or future dates are empty')
-        
-        if isinstance(forecast, pd.Series):
-            forecast = forecast.values
-        
-        min_length = min(len(forecast), len(future_dates))
-        forecast = forecast[:min_length]
-        future_dates = future_dates[:min_length]
-        
-        if len(forecast) != len(future_dates):
-            raise ValueError(f"Lengths still do not match: Forecast ({len(forecast)}) vs Future dates ({len(future_dates)})")
-        
-        return future_dates, forecast
-    except Exception as e:
-        st.error(f'An error occurred in ARIMA prediction: {str(e)}')
-        st.error(f'Data shape: {df.shape}, Prediction days: {prediction_days}')
-        st.error(f'Available data points: {len(df)}')
-        return None, None
+    future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
+    future_X = np.arange(len(df), len(df) + prediction_days).reshape(-1, 1)
+    future_prices = model.predict(future_X)
+
+    return future_dates, future_prices
 
 def lstm_prediction(df, prediction_days):
     if len(df) < 60:
@@ -115,15 +78,17 @@ def lstm_prediction(df, prediction_days):
         x_train, y_train = np.array(x_train), np.array(y_train)
         x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-        input_layer = Input(shape=(x_train.shape[1], 1))
         model = Sequential([
-            input_layer,
+            LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)),
+            Dropout(0.2),
             LSTM(units=50, return_sequences=True),
+            Dropout(0.2),
             LSTM(units=50),
-            Dense(1)
+            Dropout(0.2),
+            Dense(units=1)
         ])
         model.compile(optimizer='adam', loss='mean_squared_error')
-        model.fit(x_train, y_train, epochs=1, batch_size=1, verbose=0)
+        model.fit(x_train, y_train, epochs=25, batch_size=32, verbose=0)
 
         inputs = df['Close'].values[-60:].reshape(-1, 1)
         inputs = scaler.transform(inputs)
@@ -142,29 +107,6 @@ def lstm_prediction(df, prediction_days):
         return future_dates, future_prices.flatten()
     except Exception as e:
         st.error(f"An error occurred in LSTM prediction: {str(e)}")
-        return None, None
-
-def xgboost_prediction(df, prediction_days):
-    try:
-        df['Date'] = df.index
-        df['Date'] = (df['Date'] - df['Date'].min()).dt.days
-        X = df[['Date']].values
-        y = df['Close'].values
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-
-        model = xgb.XGBRegressor(objective="reg:squarederror", n_estimators=100, learning_rate=0.1, random_state=0)
-        model.fit(X_train, y_train)
-
-        last_date = df['Date'].iloc[-1]
-        future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
-        future_X = np.arange(last_date + 1, last_date + prediction_days + 1).reshape(-1, 1)
-
-        future_prices = model.predict(future_X)
-
-        return future_dates, future_prices
-    except Exception as e:
-        st.error(f"An error occurred in XGBoost prediction: {str(e)}")
         return None, None
 
 try:
@@ -191,12 +133,10 @@ try:
 
     if model_choice == "Linear Regression":
         future_dates, future_prices = linear_regression_prediction(df, prediction_days)
-    elif model_choice == "ARIMA":
-        future_dates, future_prices = arima_prediction(df, prediction_days)
-    elif model_choice == "LSTM":
+    elif model_choice == "Random Forest":
+        future_dates, future_prices = random_forest_prediction(df, prediction_days)
+    else:  # LSTM
         future_dates, future_prices = lstm_prediction(df, prediction_days)
-    else:  # XGBoost
-        future_dates, future_prices = xgboost_prediction(df, prediction_days)
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, subplot_titles=('Stock Price', 'Volume'), row_width=[0.2, 0.7])
 
@@ -229,7 +169,7 @@ This Stock Data Visualization app allows you to:
 - View key financial information for a given stock
 - Visualize historical price data with an interactive chart
 - Download the summary data as a CSV file
-- See price predictions using different models (Linear Regression, ARIMA, LSTM, and XGBoost)
+- See price predictions using different models (Linear Regression, Random Forest, and LSTM)
 
 Enter a stock symbol in the sidebar to get started!
 """)
