@@ -26,7 +26,7 @@ if 'theme' not in st.session_state:
 # Theme switcher
 def switch_theme():
     st.session_state.theme = 'dark' if st.session_state.theme == 'light' else 'light'
-    switch_page("main")
+    st.experimental_rerun()
 
 # Apply theme
 if st.session_state.theme == 'dark':
@@ -44,21 +44,39 @@ if st.session_state.theme == 'dark':
         background-color: #262730;
         color: #FAFAFA;
     }
+    .stSidebar {
+        background-color: #1E1E1E;
+    }
+    .stTitle, .stHeader {
+        color: #FAFAFA !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <style>
+    .stTitle, .stHeader {
+        color: #262730 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # Sidebar
-st.sidebar.title("Stock Data Visualization")
-st.sidebar.image("assets/app_icon.svg", width=100)
-stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
-date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
-prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
-
-if st.sidebar.button("Switch Theme"):
-    switch_theme()
+with st.sidebar:
+    st.title("Stock Data Visualization")
+    stock_symbol = st.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
+    date_range = st.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
+    prediction_days = st.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
+    
+    if st.button("Switch Theme"):
+        switch_theme()
 
 # Main content
-st.title(f"Stock Data for {stock_symbol}")
+col1, col2 = st.columns([1, 10])
+with col1:
+    st.image("assets/app_icon.svg", width=50)
+with col2:
+    st.title(f"Stock Data for {stock_symbol}")
 
 @st.cache_data
 def get_stock_data(symbol, period):
