@@ -51,14 +51,32 @@ def linear_regression_prediction(df, prediction_days):
 
 def arima_prediction(df, prediction_days):
     try:
-        model = ARIMA(df['Close'], order=(1, 1, 1), freq='B')
+        # Limit prediction to a maximum of 1 year (252 trading days)
+        prediction_days = min(prediction_days, 252)
+        
+        # Check if we have enough data points
+        if len(df) < 30:
+            raise ValueError("Not enough data points for ARIMA prediction. Need at least 30 data points.")
+        
+        # Adjust ARIMA parameters based on the length of the input data
+        if len(df) < 100:
+            order = (1, 1, 1)
+        elif len(df) < 500:
+            order = (2, 1, 2)
+        else:
+            order = (3, 1, 3)
+        
+        model = ARIMA(df['Close'], order=order, freq='B')
         results = model.fit()
+        
+        # Generate forecast
         forecast = results.forecast(steps=prediction_days)
         future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
         
-        print(f"Debug: Forecast: {forecast}")
-        print(f"Debug: Future dates: {future_dates}")
-        print(f"Debug: Forecast length: {len(forecast)}, Future dates length: {len(future_dates)}")
+        print(f"Debug: Forecast shape: {forecast.shape}")
+        print(f"Debug: Future dates shape: {future_dates.shape}")
+        print(f"Debug: Forecast head: {forecast.head()}")
+        print(f"Debug: Future dates head: {future_dates[:5]}")
         
         if len(forecast) == 0 or len(future_dates) == 0:
             raise ValueError('Forecast or future dates are empty')
