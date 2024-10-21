@@ -56,6 +56,12 @@ def arima_prediction(df, prediction_days):
     results = model.fit()
     forecast = results.forecast(steps=prediction_days)
     future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
+    
+    # Ensure lengths match
+    min_length = min(len(future_dates), len(forecast))
+    future_dates = future_dates[:min_length]
+    forecast = forecast[:min_length]
+    
     return future_dates, forecast
 
 def lstm_prediction(df, prediction_days):
