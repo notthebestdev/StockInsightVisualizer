@@ -52,8 +52,7 @@ def linear_regression_prediction(df, prediction_days):
 def arima_prediction(df, prediction_days):
     df_copy = df.copy()
     df_copy.index = pd.DatetimeIndex(df_copy.index)
-    df_copy = df_copy.asfreq('B')
-    model = ARIMA(df_copy['Close'], order=(1, 1, 1))
+    model = ARIMA(df_copy['Close'], order=(1, 1, 1), freq='B')
     results = model.fit()
     forecast = results.forecast(steps=prediction_days)
     future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
