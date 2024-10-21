@@ -56,13 +56,20 @@ def arima_prediction(df, prediction_days):
         forecast = results.forecast(steps=prediction_days)
         future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
         
+        print(f"Debug: Forecast length: {len(forecast)}, Future dates length: {len(future_dates)}")
+        
         # Ensure lengths match
         min_length = min(len(forecast), len(future_dates))
         forecast = forecast[:min_length]
         future_dates = future_dates[:min_length]
         
+        print(f"Debug: After adjustment - Forecast length: {len(forecast)}, Future dates length: {len(future_dates)}")
+        
         if len(forecast) == 0 or len(future_dates) == 0:
             raise ValueError('Forecast or future dates are empty')
+        
+        if len(forecast) != len(future_dates):
+            raise ValueError(f'Lengths still do not match: Forecast ({len(forecast)}) vs Future dates ({len(future_dates)})')
         
         return future_dates, forecast
     except Exception as e:
