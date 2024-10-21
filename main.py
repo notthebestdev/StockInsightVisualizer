@@ -99,19 +99,32 @@ def lstm_prediction(df, prediction_days):
         return None, None
 
 def xgboost_prediction(df, prediction_days):
-    X = np.arange(len(df)).reshape(-1, 1)
-    y = df['Close'].values
+    try:
+        # Prepare the data
+        df['Date'] = df.index
+        df['Date'] = (df['Date'] - df['Date'].min()).dt.days
+        X = df[['Date']].values
+        y = df['Close'].values
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-    
-    model = xgb.XGBRegressor(objective="reg:squarederror", n_estimators=100, learning_rate=0.1)
-    model.fit(X_train, y_train)
+        # Split the data
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
 
-    future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
-    future_X = np.arange(len(df), len(df) + prediction_days).reshape(-1, 1)
-    future_prices = model.predict(future_X)
+        # Create and train the model
+        model = xgb.XGBRegressor(objective="reg:squarederror", n_estimators=100, learning_rate=0.1, random_state=0)
+        model.fit(X_train, y_train)
 
-    return future_dates, future_prices
+        # Prepare future dates for prediction
+        last_date = df['Date'].iloc[-1]
+        future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
+        future_X = np.arange(last_date + 1, last_date + prediction_days + 1).reshape(-1, 1)
+
+        # Make predictions
+        future_prices = model.predict(future_X)
+
+        return future_dates, future_prices
+    except Exception as e:
+        st.error(f"An error occurred in XGBoost prediction: {str(e)}")
+        return None, None
 
 try:
     df, info = get_stock_data(stock_symbol, date_range)
