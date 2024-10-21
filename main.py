@@ -56,13 +56,13 @@ def arima_prediction(df, prediction_days):
     return future_dates, forecast
 
 def lstm_prediction(df, prediction_days):
+    if len(df) < 60:
+        st.warning("Not enough data points for LSTM prediction. Need at least 60 data points.")
+        return None, None
+
     try:
         st.write("Debug: Starting LSTM prediction")
         st.write(f"Debug: Input DataFrame shape: {df.shape}")
-        
-        if len(df) < 60:
-            st.error("Error: Not enough data points for LSTM prediction. Need at least 60 data points.")
-            return None, None
 
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaled_data = scaler.fit_transform(df['Close'].values.reshape(-1, 1))
@@ -142,7 +142,8 @@ try:
 
     fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name="Stock Price"), row=1, col=1)
 
-    fig.add_trace(go.Scatter(x=future_dates, y=future_prices, mode='lines', name=f'{model_choice} Prediction', line=dict(color='red', dash='dash')), row=1, col=1)
+    if future_dates is not None and future_prices is not None:
+        fig.add_trace(go.Scatter(x=future_dates, y=future_prices, mode='lines', name=f'{model_choice} Prediction', line=dict(color='red', dash='dash')), row=1, col=1)
 
     fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name="Volume"), row=2, col=1)
 
