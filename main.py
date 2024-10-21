@@ -17,14 +17,12 @@ from io import StringIO
 # Set page config
 st.set_page_config(
     page_title="Stock Data Visualization",
-    page_icon="assets/app_icon.svg",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # Sidebar
 st.sidebar.title("Stock Data Visualization")
-st.sidebar.image("assets/app_icon.svg", width=100)
 stock_symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL)", value="AAPL")
 date_range = st.sidebar.selectbox("Select Date Range", ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"])
 prediction_days = st.sidebar.slider("Prediction Days", min_value=7, max_value=365, value=30, step=1)
