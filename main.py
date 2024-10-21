@@ -63,6 +63,9 @@ def arima_prediction(df, prediction_days):
         if len(forecast) == 0 or len(future_dates) == 0:
             raise ValueError('Forecast or future dates are empty')
         
+        if isinstance(forecast, pd.Series):
+            forecast = forecast.values
+        
         if len(forecast) != len(future_dates):
             # Truncate the longer one to match the shorter one
             min_length = min(len(forecast), len(future_dates))
