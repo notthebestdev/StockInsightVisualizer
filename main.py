@@ -54,11 +54,21 @@ def arima_prediction(df, prediction_days):
         model = ARIMA(df['Close'], order=(1, 1, 1), freq='B')
         results = model.fit()
         forecast = results.forecast(steps=prediction_days)
-        future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=len(forecast), freq='B')
+        future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
+        
+        # Ensure lengths match
+        min_length = min(len(forecast), len(future_dates))
+        forecast = forecast[:min_length]
+        future_dates = future_dates[:min_length]
+        
+        if len(forecast) == 0 or len(future_dates) == 0:
+            raise ValueError('Forecast or future dates are empty')
         
         return future_dates, forecast
     except Exception as e:
         st.error(f'An error occurred in ARIMA prediction: {str(e)}')
+        st.error(f'Data shape: {df.shape}, Prediction days: {prediction_days}')
+        st.error(f'Forecast length: {len(forecast) if "forecast" in locals() else "N/A"}, Future dates length: {len(future_dates) if "future_dates" in locals() else "N/A"}')
         return None, None
 
 def lstm_prediction(df, prediction_days):
