@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import base64
 from io import StringIO
 import xgboost as xgb
+from pandas.tseries.offsets import BDay
 
 st.set_page_config(
     page_title="Stock Data Visualization",
@@ -51,12 +52,12 @@ def linear_regression_prediction(df, prediction_days):
 
 def arima_prediction(df, prediction_days):
     df_copy = df.copy()
-    df_copy.index = pd.DatetimeIndex(df_copy.index)
+    df_copy.index = pd.DatetimeIndex(df_copy.index).to_period('B').to_timestamp()
     df_copy = df_copy.asfreq('B')
     model = ARIMA(df_copy['Close'], order=(1, 1, 1))
     results = model.fit()
     forecast = results.forecast(steps=prediction_days)
-    future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
+    future_dates = pd.date_range(start=df.index[-1] + BDay(), periods=prediction_days, freq='B')
     
     # Ensure lengths match
     min_length = min(len(future_dates), len(forecast))
