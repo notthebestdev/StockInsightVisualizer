@@ -50,17 +50,16 @@ def linear_regression_prediction(df, prediction_days):
     return future_dates, future_prices
 
 def arima_prediction(df, prediction_days):
-    model = ARIMA(df['Close'], order=(1, 1, 1), freq='B')
-    results = model.fit()
-    forecast = results.forecast(steps=prediction_days)
-    future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
-    
-    # Ensure lengths match
-    min_length = min(len(future_dates), len(forecast))
-    future_dates = future_dates[:min_length]
-    forecast = forecast[:min_length]
-    
-    return future_dates, forecast
+    try:
+        model = ARIMA(df['Close'], order=(1, 1, 1), freq='B')
+        results = model.fit()
+        forecast = results.forecast(steps=prediction_days)
+        future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=len(forecast), freq='B')
+        
+        return future_dates, forecast
+    except Exception as e:
+        st.error(f'An error occurred in ARIMA prediction: {str(e)}')
+        return None, None
 
 def lstm_prediction(df, prediction_days):
     if len(df) < 60:
