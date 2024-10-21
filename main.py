@@ -51,12 +51,16 @@ def linear_regression_prediction(df, prediction_days):
 
 def arima_prediction(df, prediction_days):
     try:
+        if len(df) < 30:
+            st.warning("Not enough data points for ARIMA prediction. Falling back to simple moving average.")
+            # Calculate simple moving average
+            ma = df['Close'].rolling(window=min(len(df), 7)).mean()
+            future_dates = pd.date_range(start=df.index[-1] + pd.Timedelta(days=1), periods=prediction_days, freq='B')
+            future_prices = [ma.iloc[-1]] * len(future_dates)
+            return future_dates, future_prices
+
         # Limit prediction to a maximum of 1 year (252 trading days)
         prediction_days = min(prediction_days, 252)
-        
-        # Check if we have enough data points
-        if len(df) < 30:
-            raise ValueError("Not enough data points for ARIMA prediction. Need at least 30 data points.")
         
         # Adjust ARIMA parameters based on the length of the input data
         if len(df) < 100:
@@ -95,8 +99,7 @@ def arima_prediction(df, prediction_days):
     except Exception as e:
         st.error(f'An error occurred in ARIMA prediction: {str(e)}')
         st.error(f'Data shape: {df.shape}, Prediction days: {prediction_days}')
-        st.error(f'Forecast: {forecast if "forecast" in locals() else "N/A"}')
-        st.error(f'Future dates: {future_dates if "future_dates" in locals() else "N/A"}')
+        st.error(f'Available data points: {len(df)}')
         return None, None
 
 def lstm_prediction(df, prediction_days):
