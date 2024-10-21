@@ -61,13 +61,8 @@ def lstm_prediction(df, prediction_days):
         return None, None
 
     try:
-        st.write("Debug: Starting LSTM prediction")
-        st.write(f"Debug: Input DataFrame shape: {df.shape}")
-
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaled_data = scaler.fit_transform(df['Close'].values.reshape(-1, 1))
-        
-        st.write(f"Debug: Scaled data shape: {scaled_data.shape}")
 
         x_train, y_train = [], []
         for i in range(60, len(scaled_data)):
@@ -75,8 +70,6 @@ def lstm_prediction(df, prediction_days):
             y_train.append(scaled_data[i, 0])
         x_train, y_train = np.array(x_train), np.array(y_train)
         x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-        
-        st.write(f"Debug: x_train shape: {x_train.shape}, y_train shape: {y_train.shape}")
 
         model = Sequential()
         model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
@@ -87,9 +80,7 @@ def lstm_prediction(df, prediction_days):
 
         inputs = df['Close'].values[-60:].reshape(-1, 1)
         inputs = scaler.transform(inputs)
-        
-        st.write(f"Debug: Inputs shape: {inputs.shape}")
-        
+
         future_prices = []
         current_batch = inputs[-60:].reshape((1, 60, 1))
         for i in range(prediction_days):
@@ -97,13 +88,10 @@ def lstm_prediction(df, prediction_days):
             future_prices.append(current_pred[0])
             current_batch = np.roll(current_batch, -1, axis=1)
             current_batch[0, -1, 0] = current_pred[0]
-        
+
         future_prices = scaler.inverse_transform(np.array(future_prices).reshape(-1, 1))
         future_dates = pd.date_range(start=df.index[-1] + timedelta(days=1), periods=prediction_days)
-        
-        st.write(f"Debug: Future prices shape: {future_prices.shape}")
-        st.write(f"Debug: Future dates shape: {future_dates.shape}")
-        
+
         return future_dates, future_prices.flatten()
     except Exception as e:
         st.error(f"An error occurred in LSTM prediction: {str(e)}")
