@@ -10,7 +10,6 @@ A comprehensive stock data visualization app using Streamlit with advanced predi
 - Interactive candlestick charts
 - Multiple prediction models:
   - Linear Regression
-  - ARIMA
   - LSTM (Long Short-Term Memory)
 - Customizable date range selection
 - Downloadable summary data in CSV format
@@ -20,7 +19,7 @@ A comprehensive stock data visualization app using Streamlit with advanced predi
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/stock-data-visualization.git
+   git clone https://github.com/notthebestdev/stock-data-visualization.git
    cd stock-data-visualization
    ```
 
